@@ -4,8 +4,9 @@
 
 ### Changed
 
-- Bundles [winsv](https://github.com/vision10/winsv) v0.1.0, a native wrapper of 0.5 MB that needs no .NET and reads
-  the configuration format of WinSW v3, instead of WinSW v2.11.0 (17 MB). 64-bit Windows only.
+- Bundles [winsv](https://github.com/vision10/winsv) v0.1.1, a native wrapper of 0.5 MB that needs no .NET and reads
+  the configuration format of WinSW v3, instead of WinSW v2.11.0 (17 MB). A 32-bit build is included and used by a
+  32-bit Node.js.
   Services installed with 0.x keep running with their old wrapper; uninstall them with the old version before reinstalling.
 - WinSW v3 can still be used through `wrapperExe` or `WIN_SV_EXE`. `download`, `beeponshutdown` and `customize()`
   only work with it.

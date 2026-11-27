@@ -36,6 +36,15 @@ test('the bundled wrapper is winsv, another executable is driven like WinSW', t 
   assert.equal(winsw.isWinSW(other), true);
 });
 
+test('both builds of winsv are bundled, and the one matching Node.js is the default', () => {
+  const bin = path.dirname(winsw.WINSV_EXE);
+  assert.equal(path.basename(winsw.WINSV_EXE), process.arch === 'ia32' ? 'winsv-x86.exe' : 'winsv.exe');
+  for (const name of ['winsv.exe', 'winsv-x86.exe']) {
+    assert.equal(winsw.isWinSW(path.join(bin, name)), false, name);
+    assert.ok(require('../package.json').files.includes('bin/' + name), name);
+  }
+});
+
 test('a service that still runs a copy of WinSW is driven like WinSW until the copy is replaced', async t => {
   const { svc, calls } = recorded(t, { logOnAs: { account: 'corp\\bob', password: 'secret' } });
   fs.mkdirSync(svc.winswPath, { recursive: true });

@@ -42,6 +42,7 @@
     "lib/",
     "bin/cli.js",
     "bin/winsv.exe",
+    "bin/winsv-x86.exe",
     "bin/winsv.LICENSE.txt"
   ],
   "os": [

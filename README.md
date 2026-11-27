@@ -12,7 +12,7 @@ Run a Node.js script (or any executable) as a native Windows service.
 - **Processes** and **event log** helpers.
 - **Zero dependencies**, a CLI, CommonJS and ES module entry points, TypeScript types.
 
-Requires 64-bit Windows and Node.js 18.3 or newer. Nothing else has to be installed: no .NET.
+Requires Windows and Node.js 18.3 or newer. Nothing else has to be installed: no .NET.
 
 ## Installation
 
@@ -49,7 +49,8 @@ an error message, so it works whatever the display language of Windows.
 
 `install()` creates a folder (by default `daemon`, next to the script) containing:
 
-- `<id>.exe`: a copy of the wrapper (winsv), the process Windows actually runs as the service
+- `<id>.exe`: a copy of the wrapper (winsv), the process Windows actually runs as the service. A 32-bit Node.js
+  gets the 32-bit wrapper, which is what a 32-bit Windows needs.
 - `<id>.xml`: its configuration, generated from the options below
 - `<id>.out.log`, `<id>.err.log`: the output of your script, and `<id>.wrapper.log`
 
@@ -345,4 +346,4 @@ See [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 
-[MIT](LICENSE). Bundles [winsv](https://github.com/vision10/winsv) v0.1.0, also MIT, see `bin/winsv.LICENSE.txt`.
+[MIT](LICENSE). Bundles [winsv](https://github.com/vision10/winsv) v0.1.1 (64-bit and 32-bit builds), also MIT, see `bin/winsv.LICENSE.txt`.
