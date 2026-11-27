@@ -299,6 +299,23 @@ The process started as administrator is never a `pwsh` found through `PATH`, onl
 from `WIN_SV_POWERSHELL`, or Windows PowerShell.
 The service commands themselves (`install`, `start`, `stop`...) do not need PowerShell.
 
+### Known issue: elevation blocked by Microsoft Defender
+
+A UAC prompt of this package starts a hidden, elevated PowerShell with its script as an encoded command. Microsoft
+Defender scores such command lines with a machine-learning model and now and then blocks one before the prompt is
+shown. Whether it does depends on the text of the command, so the same call with other arguments goes through.
+
+- What you see: the call rejects with `This command cannot be run due to the error: Access is denied.` and no
+  prompt appears. Defender may show a notification naming `Trojan:Win32/Commando.C!ml` or
+  `!#SLF:CMD_HSTR:General.ML.B`, and logs the command line in the event log
+  `Microsoft-Windows-Windows Defender/Operational` (events 1116 and 1117).
+- What is affected: `services.start`, `stop` and `restart`, a forced `process.kill`,
+  `EventLogger.registerEventSource()`, the helpers `cmd.elevate`, `cmd.elevateAll` and `cmd.admin`, uninstalling a
+  running service, and `npm run test:acceptance`.
+- What is not: installing, starting and stopping a `Service`. The wrapper asks for administrator rights itself,
+  without PowerShell.
+- Until this is fixed: run from an elevated terminal, where nothing has to be elevated.
+
 ## Using another wrapper
 
 The executable copied for each service can be replaced, per service with the `wrapperExe` option or globally with
