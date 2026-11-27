@@ -19,9 +19,24 @@ function tag(xml, name) {
   return (xml.match(new RegExp(`<${name}>(.*)</${name}>`)) || [])[1];
 }
 
-/** The wrapper under test: the bundled WinSW, or the executable named by WIN_SV_EXE. */
+/** The wrapper under test: the bundled winsv, or the executable named by WIN_SV_EXE. */
 const wrapper = require('../lib/winsw').wrapperExe();
-const isWinSW = wrapper === require('../lib/winsw').WINSW_EXE;
+const isWinSW = require('../lib/winsw').isWinSW(wrapper);
+
+/**
+ * For one test the wrapper is a file standing for WinSW: whatever is not winsv is driven like it,
+ * and the commands are recorded by the test, never run.
+ */
+function asWinSW(t) {
+  const file = path.join(tmpDir(t), 'WinSW.exe');
+  fs.writeFileSync(file, 'stands for WinSW');
+  const before = process.env.WIN_SV_EXE;
+  process.env.WIN_SV_EXE = file;
+  t.after(() => {
+    if (before === undefined) { delete process.env.WIN_SV_EXE } else { process.env.WIN_SV_EXE = before }
+  });
+  return file;
+}
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -38,4 +53,4 @@ async function waitFor(what, check, timeout = 30000) {
   throw new Error(`Timed out waiting for ${what}` + (last ? `: ${last.message}` : ''));
 }
 
-module.exports = { script, tmpDir, tag, sleep, waitFor, wrapper, isWinSW };
+module.exports = { script, tmpDir, tag, sleep, waitFor, wrapper, isWinSW, asWinSW };

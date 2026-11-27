@@ -24,7 +24,7 @@ Commands:
   status       Print the service status
   logs         Print the end of the service output
   list         List the services installed on this machine, optionally filtered by name
-  xml          Print the generated WinSW configuration, changes nothing
+  xml          Print the generated configuration, changes nothing
 
 Options:
   -s, --script <path>        Script to run as a service

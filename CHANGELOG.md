@@ -4,10 +4,16 @@
 
 ### Changed
 
-- Bundles WinSW v3.0.0-alpha.11 (.NET Framework build, 0.7 MB) instead of v2.11.0 (17 MB).
+- Bundles [winsv](https://github.com/vision10/winsv) v0.1.0, a native wrapper of 0.5 MB that needs no .NET and reads
+  the configuration format of WinSW v3, instead of WinSW v2.11.0 (17 MB). 64-bit Windows only.
   Services installed with 0.x keep running with their old wrapper; uninstall them with the old version before reinstalling.
+- WinSW v3 can still be used through `wrapperExe` or `WIN_SV_EXE`. `download`, `beeponshutdown` and `customize()`
+  only work with it.
+- Installing and starting is one command of the wrapper, and the password of a service account is written to its
+  standard input instead of its command line.
+- A service account is given the "Log on as a service" right unless `allowservicelogon` is `false`.
 - No dependencies: `xml` and `yargs` are replaced by a small XML writer and Node's `util.parseArgs`.
-- `elevate.exe` is gone. WinSW asks for elevation itself, the other helpers use PowerShell `Start-Process -Verb RunAs`
+- `elevate.exe` is gone. The wrapper asks for elevation itself, the other helpers use PowerShell `Start-Process -Verb RunAs`
   and now return the output of the elevated command.
 - Elevation is decided from exit codes and from the rights of the process instead of the English text of error
   messages, so it also works on a Windows displayed in another language.
@@ -16,7 +22,7 @@
 - The wrapper folder (`daemon`) is created next to the script. 0.x resolved it from the script path itself, which failed.
 - `install()` always rewrites the configuration file; `overwrite` only controls the wrapper executable.
 - `uninstall()` checks the status first, so it no longer fails on a stopped or missing service. It also accepts an options object.
-- `refresh(options)` now writes the changed options before asking WinSW to apply them.
+- `refresh(options)` now writes the changed options before asking the wrapper to apply them.
 - `status()` resolves `NonExistent` when the service files are missing instead of rejecting.
 - Invalid `priority`, `startmode`, `log.mode` and `onfailure.action` values throw instead of being written to the file.
 - `process.list()` reads WMI and returns `{ name, pid, ppid, sessionId, memory, path, commandLine, startTime }` with numbers
@@ -26,7 +32,7 @@
 - `process.start/stop/restart` check the service first: an unknown service rejects with code 1060 without a
   prompt, and a service already in the wanted state is left alone.
 - `logOnAs` with a user account and no password asks for the password when installing (it used to install with
-  an empty password). A password given in `logOnAs` is passed to WinSW at install time and no longer written to
+  an empty password). A password given in `logOnAs` is passed to the wrapper at install time and no longer written to
   the configuration file.
 - `EventLogger.registerEventSource()` really registers the source (it only queried the registry before).
 - The CLI command is `win-sv` (was `service`, and did not work).
@@ -51,10 +57,8 @@
 - ES module entry point: `import { Service } from 'win-sv'`.
 - PowerShell 7 is used when installed, Windows PowerShell 5.1 otherwise; `WIN_SV_POWERSHELL` chooses the executable.
 - `WIN_SV_EXE` replaces the bundled wrapper executable, like the `wrapperExe` option.
-- Support for the [winsv](https://github.com/vision10/winsv) wrapper, used when another wrapper than the bundled
-  WinSW is set: install and start in one command, the account password on the standard input instead of the
-  command line, and the options `keepDetached`, `log.combine`, `log.timestamp`, `log.rollOnStart`, `log.wrapper`
-  and `log.keepFiles` for the time based modes.
+- Options `keepDetached`, `log.combine`, `log.timestamp`, `log.rollOnStart`, `log.wrapper`, and `log.keepFiles`
+  for the time based modes.
 - `logFile()`, `logs()` and `watchLogs()` find the files rolled by time (`<id>_<date>.out.log`).
 - Options: `wrapperExe`, `prestart`, `poststart`, `prestop`, `poststop`, `preshutdown`, `preshutdownTimeout`, `autoRefresh`,
   log modes `reset` and `none`, several `download` entries, `logOnAs` as a string or with `prompt`.

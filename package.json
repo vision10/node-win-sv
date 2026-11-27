@@ -1,7 +1,7 @@
 {
   "name": "win-sv",
   "version": "1.0.0",
-  "description": "Run Node.js scripts (or any executable) as native Windows services using WinSW. Includes service, process and event log helpers, and a CLI. Zero dependencies.",
+  "description": "Run Node.js scripts (or any executable) as native Windows services, hosted by a small native wrapper (no .NET needed). Includes service, process and event log helpers, and a CLI. Zero dependencies.",
   "author": "Sorin Muresan <sorinm025@gmail.com>",
   "license": "MIT",
   "repository": {
@@ -19,6 +19,7 @@
     "elevate",
     "process",
     "winsw",
+    "winsv",
     "manager",
     "install"
   ],
@@ -40,8 +41,8 @@
     "LICENSE",
     "lib/",
     "bin/cli.js",
-    "bin/WinSW.exe",
-    "bin/WinSW.LICENSE.txt"
+    "bin/winsv.exe",
+    "bin/winsv.LICENSE.txt"
   ],
   "os": [
     "win32"

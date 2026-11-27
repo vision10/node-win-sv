@@ -8,7 +8,7 @@ const fs = require('fs');
 
 const { Service, generateXml, cmd } = require('../index');
 const winsw = require('../lib/winsw');
-const { script, tmpDir, tag, isWinSW } = require('./helpers');
+const { script, tmpDir, tag, asWinSW } = require('./helpers');
 
 const account = logOnAs => (generateXml({ id: 'svc', script, logOnAs }).match(/<serviceaccount>[\s\S]*<\/serviceaccount>/) || [''])[0];
 
@@ -76,7 +76,7 @@ test('user names are completed with the domain unless they carry one', () => {
 });
 
 test('a password given by the program is never written to the configuration file', async t => {
-  if (!isWinSW) { return t.skip('the command line of WinSW, see winsv.test.js') }
+  asWinSW(t);
   const logOnAs = { domain: 'corp', account: 'bob', password: 'S3cret & <sharp>', allowservicelogon: true };
   const xml = account(logOnAs);
   assert.equal(tag(xml, 'username'), 'corp\\bob');
@@ -93,7 +93,7 @@ test('a password given by the program is never written to the configuration file
 });
 
 test('an empty password is a password', async t => {
-  if (!isWinSW) { return t.skip('the command line of WinSW, see winsv.test.js') }
+  asWinSW(t);
   const logOnAs = { account: 'bob', password: '' };
   assert.ok(!account(logOnAs).includes('<prompt>'));
   const { svc, calls } = recorded(t, logOnAs);
@@ -116,7 +116,7 @@ test('no credentials are passed for prompting and built-in accounts', async t =>
 });
 
 test('credentials given to install() win over logOnAs', async t => {
-  if (!isWinSW) { return t.skip('the command line of WinSW, see winsv.test.js') }
+  asWinSW(t);
   const { svc, calls } = recorded(t, { account: 'corp\\bob', password: 'from config' });
   await svc.install({ user: 'corp\\alice', password: 'from install' });
   await svc.install({ password: 'only the password' });

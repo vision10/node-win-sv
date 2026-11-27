@@ -1,7 +1,7 @@
 import { EventEmitter } from 'events';
 import { ExecFileOptions } from 'child_process';
 
-/** A number is a count of seconds, a string is passed to WinSW as is (`10 sec`, `5 min`, `1 hour`, `1 day`). */
+/** A number is a count of seconds, a string is passed to the wrapper as is (`10 sec`, `5 min`, `1 hour`, `1 day`). */
 export type Duration = number | string;
 export type Arguments = string | string[];
 
@@ -24,20 +24,20 @@ export interface LogOptions {
   mode?: 'append' | 'reset' | 'none' | 'roll-by-size' | 'roll-by-time' | 'roll-by-size-time';
   /** KB, default 10240 */
   sizeThreshold?: number;
-  /** roll-by-size: default 8. With the winsv wrapper also the number of dated files kept by the time based modes. */
+  /** roll-by-size: default 8. For the time based modes, the number of dated files kept (not with WinSW). */
   keepFiles?: number;
   /** default `yyyyMMdd` */
   pattern?: string;
   autoRollAtTime?: string;
   zipOlderThanNumDays?: number;
   zipDateFormat?: string;
-  /** winsv wrapper only: the error output goes to the same file as the output */
+  /** Not with WinSW: the error output goes to the same file as the output */
   combine?: boolean;
-  /** winsv wrapper only: a date in front of each line, `true` or a format such as `yyyy-MM-dd HH:mm:ss` */
+  /** Not with WinSW: a date in front of each line, `true` or a format such as `yyyy-MM-dd HH:mm:ss` */
   timestamp?: boolean | string;
-  /** winsv wrapper only: the size based modes start a new file each time the service starts */
+  /** Not with WinSW: the size based modes start a new file each time the service starts */
   rollOnStart?: boolean;
-  /** winsv wrapper only: `false` for no `<id>.wrapper.log` */
+  /** Not with WinSW: `false` for no `<id>.wrapper.log` */
   wrapper?: boolean;
 }
 
@@ -86,7 +86,7 @@ export interface ServiceConfig {
   winswDest?: string;
   /** Name of the wrapper folder, defaults to `daemon`. */
   winswDir?: string;
-  /** Wrapper executable to use instead of the bundled WinSW. The WIN_SV_EXE environment variable does the same. */
+  /** Wrapper executable to use instead of the bundled winsv, WinSW v3 for one. The WIN_SV_EXE environment variable does the same. */
   wrapperExe?: string;
 
   logpath?: string;
@@ -114,10 +114,12 @@ export interface ServiceConfig {
   preshutdown?: boolean;
   preshutdownTimeout?: Duration;
   autoRefresh?: boolean;
-  /** winsv wrapper only: processes the service started detached (and unref'd) are not stopped with it */
+  /** Not with WinSW: processes the service started detached (and unref'd) are not stopped with it */
   keepDetached?: boolean;
   interactive?: boolean;
+  /** Only with WinSW as the wrapper */
   beeponshutdown?: boolean;
+  /** Only with WinSW as the wrapper */
   download?: Download | Download[];
 }
 
@@ -174,7 +176,7 @@ export class Service extends EventEmitter {
   restart(noElevate?: boolean, force?: boolean): Promise<string>;
   selfRestart(): Promise<string>;
   refresh(options?: Partial<ServiceConfig>, noElevate?: boolean): Promise<string>;
-  /** `manufacturer` must be 12 to 15 characters long */
+  /** Only with WinSW as the wrapper. `manufacturer` must be 12 to 15 characters long */
   customize(output: string, manufacturer: string): Promise<string>;
   /** Path of the current log file, undefined when there is none yet. */
   logFile(type?: LogType): string | undefined;

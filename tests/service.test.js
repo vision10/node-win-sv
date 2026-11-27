@@ -11,7 +11,7 @@ const path = require('path');
 
 const { Service, cmd } = require('../index');
 const winsw = require('../lib/winsw');
-const { script, tmpDir, tag, wrapper, isWinSW } = require('./helpers');
+const { script, tmpDir, tag, wrapper, isWinSW, asWinSW } = require('./helpers');
 
 /** A service with its files on disk and WinSW replaced by `answer(command, args)`. */
 function stubbed(t, config, answer) {
@@ -211,7 +211,7 @@ test('a failing command rejects and emits nothing', async t => {
 });
 
 test('install writes the files and passes the account', async t => {
-  if (!isWinSW) { return t.skip('the command line of WinSW, see winsv.test.js') }
+  asWinSW(t);
   const dest = tmpDir(t);
   const svc = new Service({ id: 'svc', script, winswDest: dest, description: 'first' });
   const calls = [];
@@ -219,7 +219,7 @@ test('install writes the files and passes the account', async t => {
 
   assert.equal(await svc.install(), 'ok');
   assert.equal(svc.exists, true);
-  assert.equal(fs.statSync(svc.exePath).size, fs.statSync(wrapper).size);
+  assert.equal(fs.statSync(svc.exePath).size, fs.statSync(winsw.wrapperExe()).size);
   assert.equal(fs.readFileSync(svc.xmlPath)[0], 0xEF, 'the file starts with a UTF-8 byte order mark');
   assert.equal(tag(fs.readFileSync(svc.xmlPath, 'utf8'), 'description'), 'first');
 
@@ -355,8 +355,8 @@ test('customize writes a working copy of the wrapper', async t => {
 
 test('removeFiles only touches files of that service', t => {
   const dir = tmpDir(t);
-  const keep = ['app2.xml', 'app.js', 'app.json', 'notes.txt', 'other.out.log'];
-  const drop = ['app.xml', 'app.exe', 'APP.exe.config', 'app.out.log', 'app.err.log', 'app.wrapper.log', 'app.1.out.log', 'app.20240101.err.log', 'app.out.log.old'];
+  const keep = ['app2.xml', 'app.js', 'app.json', 'notes.txt', 'other.out.log', 'app_other.out.log', 'apple.out.log'];
+  const drop = ['app.xml', 'app.exe', 'APP.exe.config', 'app.out.log', 'app.err.log', 'app.wrapper.log', 'app.1.out.log', 'app.20240101.err.log', 'app.out.log.old', 'app_20240101.out.log', 'app_2024-01-01.err.log'];
   keep.concat(drop).forEach(file => fs.writeFileSync(path.join(dir, file), ''));
   winsw.removeFiles(dir, 'app');
   assert.deepEqual(fs.readdirSync(dir).sort(), keep.sort());

@@ -5,14 +5,14 @@
 
 Run a Node.js script (or any executable) as a native Windows service.
 
-- **Service**: install, start, stop, restart, refresh and uninstall services, hosted by [WinSW](https://github.com/winsw/winsw) v3.
+- **Service**: install, start, stop, restart, refresh and uninstall services, hosted by [winsv](https://github.com/vision10/winsv), a small native wrapper that reads the configuration format of WinSW v3.
 - **No watchdog process**: crashes are handled by the Windows service manager itself (the "Recovery" tab of a service), configured with `onfailure`.
 - **Logs**: read or follow the output of the service.
 - **Any service**: list, query, start and stop the services of the machine by name.
 - **Processes** and **event log** helpers.
 - **Zero dependencies**, a CLI, CommonJS and ES module entry points, TypeScript types.
 
-Requires Windows, Node.js 18.3 or newer and .NET Framework 4.6.1 or newer (part of Windows 10, 11 and Server 2016+).
+Requires 64-bit Windows and Node.js 18.3 or newer. Nothing else has to be installed: no .NET.
 
 ## Installation
 
@@ -49,7 +49,7 @@ an error message, so it works whatever the display language of Windows.
 
 `install()` creates a folder (by default `daemon`, next to the script) containing:
 
-- `<id>.exe`: a copy of WinSW, the process Windows actually runs as the service
+- `<id>.exe`: a copy of the wrapper (winsv), the process Windows actually runs as the service
 - `<id>.xml`: its configuration, generated from the options below
 - `<id>.out.log`, `<id>.err.log`: the output of your script, and `<id>.wrapper.log`
 
@@ -101,9 +101,13 @@ Only `id` (or `name`) and `script` (or `execPath`) are required.
   log: {
     mode: 'roll-by-size',                // 'append' (default) | 'reset' | 'none' | 'roll-by-size' | 'roll-by-time' | 'roll-by-size-time'
     sizeThreshold: 10240,                // KB, roll-by-size and roll-by-size-time
-    keepFiles: 8,                        // roll-by-size
+    keepFiles: 8,                        // roll-by-size; for the time based modes, how many dated files are kept (default: all)
     pattern: 'yyyyMMdd',                 // roll-by-time and roll-by-size-time
     autoRollAtTime: '00:00:00',          // roll-by-size-time
+    combine: false,                      // true: the errors go to the same file as the output
+    timestamp: false,                    // true or a format ('yyyy-MM-dd HH:mm:ss'): a date in front of each line
+    rollOnStart: false,                  // true: the size based modes start a new file each time the service starts
+    wrapper: true,                       // false: no <id>.wrapper.log
   },
 
   startmode: 'automatic',                // 'automatic' (default) | 'manual' | 'disabled'
@@ -123,15 +127,14 @@ Only `id` (or `name`) and `script` (or `execPath`) are required.
   preshutdownTimeout: 180,
   autoRefresh: true,
   interactive: false,
-  beeponshutdown: false,
-  download: { from: '', to: '', failOnError: false, auth: 'basic', user: '', password: '', proxy: '' }, // or a list
+  keepDetached: false,                   // true: processes started detached (and unref'd) are not stopped with the service
 }
 ```
 
 Arguments given as an array are quoted for you; a string is used as written.
-WinSW expands `%NAME%` environment variables found in any value.
+The wrapper expands `%NAME%` environment variables found in any value.
 
-See the [WinSW configuration reference](https://github.com/winsw/winsw/blob/v3/docs/xml-config-file.md) for details on each setting.
+See the [winsv README](https://github.com/vision10/winsv#configuration) for details on each setting.
 
 ### Service account
 
@@ -150,13 +153,11 @@ logOnAs: { prompt: 'dialog' }                          // ask for the user name 
 logOnAs: { account: 'corp\\bob', password: process.env.SVC_PASSWORD, allowservicelogon: true }
 ```
 
-- `allowservicelogon` grants the account the "Log on as a service" right. The winsv wrapper grants it unless
-  `allowservicelogon` is `false`.
+- The account is given the "Log on as a service" right, which it needs. `allowservicelogon: false` leaves the
+  rights of the account alone.
 - `svc.install({ user, password })` sets the account for that installation only and replaces `logOnAs`.
-- A password is **never written to the configuration file**. With the bundled WinSW it is passed on the command
-  line while the service is being installed, where other processes of the machine can read it for that moment.
-  Where that matters, prefer the prompt, an account that needs no password (built-in or group managed), or the
-  winsv wrapper, which reads it from its standard input (see "Using another wrapper").
+- A password is **never written to the configuration file** and never appears on a command line: the wrapper
+  reads it from its standard input.
 - Do not keep the password in your source: read it from the environment or a secret store.
 
 ### Methods
@@ -174,7 +175,7 @@ await svc.status();       // 'NonExistent' | 'Inactive (stopped)' | 'Active (run
 await svc.isInstalled();  // boolean
 await svc.isRunning();    // boolean
 await svc.selfRestart();  // restart, callable from inside the service itself
-await svc.customize(output, manufacturer);   // write a copy of the wrapper with another manufacturer name (12 to 15 characters)
+await svc.customize(output, manufacturer);   // WinSW only, see "Using another wrapper"
 
 await svc.logs();                            // last 100 lines of the script output
 await svc.logs({ type: 'err', lines: 20 });  // type: 'out' | 'err' | 'wrapper'
@@ -185,7 +186,7 @@ const watcher = svc.watchLogs('out', text => process.stdout.write(text)); // fol
 - `install` always rewrites the configuration file; `overwrite` also replaces an existing wrapper executable.
 - `uninstall` removes the Windows service. `removeFiles` also deletes the wrapper, its configuration and logs, never your application.
 - `uninstall(removeFiles, forceStop, noElevate, noWait)` is still accepted.
-- Failures reject with an `Error` carrying WinSW's message; `code` is its exit code, usually a [Windows error code](https://learn.microsoft.com/windows/win32/debug/system-error-codes) (`5` access denied, `1060` service does not exist, `1073` service already exists, `1223` UAC prompt declined...).
+- Failures reject with an `Error` carrying the wrapper's message; `code` is its exit code, usually a [Windows error code](https://learn.microsoft.com/windows/win32/debug/system-error-codes) (`5` access denied, `1060` service does not exist, `1073` service already exists, `1223` UAC prompt declined...).
 
 ### Events
 
@@ -295,7 +296,7 @@ where Windows still ships it. Set `WIN_SV_POWERSHELL` to the path of the executa
 
 The process started as administrator is never a `pwsh` found through `PATH`, only one from the default location,
 from `WIN_SV_POWERSHELL`, or Windows PowerShell.
-The WinSW commands themselves (`install`, `start`, `stop`...) do not need PowerShell.
+The service commands themselves (`install`, `start`, `stop`...) do not need PowerShell.
 
 ## Using another wrapper
 
@@ -308,18 +309,23 @@ set WIN_SV_EXE=C:\path\to\wrapper.exe
 npm run test:acceptance
 ```
 
-### winsv
+### WinSW
 
-[winsv](https://github.com/vision10/winsv) is such a replacement: a small native executable that needs no .NET.
-Any wrapper other than the bundled WinSW is taken to be winsv, and the package then uses what it adds:
+[WinSW](https://github.com/winsw/winsw) v3, which this package bundled before, still works as a wrapper:
+download `WinSW-net461.exe` or `WinSW-x64.exe` and name it in `wrapperExe`. A wrapper that is not winsv is
+driven like WinSW, which changes a few things:
 
-- `install({ start: true })` is one command, and the password of the service account is written to the standard
-  input of the wrapper instead of its command line.
-- `keepDetached: true`: processes the service started detached (`spawn(..., { detached: true })` and `unref()`)
-  are not stopped with it.
-- `log.combine`, `log.timestamp` (`true` or a date format), `log.rollOnStart`, `log.wrapper: false`, and
-  `log.keepFiles` for the time based modes.
-- `download`, `customize()` and `beeponshutdown` are WinSW only.
+- The options `download` (files fetched before the service starts), `beeponshutdown` and the method
+  `customize()` work. winsv does not have them.
+- `keepDetached` and the `log` options `combine`, `timestamp`, `rollOnStart`, `wrapper` and `keepFiles` for the
+  time based modes are ignored.
+- The password of a service account is passed on the command line of the wrapper while the service is being
+  installed, where other processes of the machine can read it for that moment.
+- The account is given the "Log on as a service" right only with `allowservicelogon: true`.
+- The .NET build needs .NET Framework 4.6.1 or newer.
+
+A service installed by an earlier version keeps its copy of WinSW and keeps working. `install({ overwrite: true })`
+replaces the copy with winsv; stop the service first, a running executable cannot be replaced.
 
 ## Tests
 
@@ -339,4 +345,4 @@ See [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 
-[MIT](LICENSE). Bundles [WinSW](https://github.com/winsw/winsw) v3.0.0-alpha.11 (.NET Framework build), also MIT, see `bin/WinSW.LICENSE.txt`.
+[MIT](LICENSE). Bundles [winsv](https://github.com/vision10/winsv) v0.1.0, also MIT, see `bin/winsv.LICENSE.txt`.

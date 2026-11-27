@@ -1,7 +1,7 @@
 'use strict';
 
-// How the package talks to the winsv wrapper, which is any wrapper other than the bundled WinSW:
-// one command installs and starts, and the password travels on the standard input.
+// How the package talks to winsv, the bundled wrapper: one command installs and starts, and the password
+// travels on the standard input. Another wrapper is driven like WinSW.
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -16,7 +16,7 @@ const { script, tmpDir, tag } = require('./helpers');
 function recorded(t, config) {
   const dir = tmpDir(t);
   const wrapperExe = path.join(dir, 'winsv.exe');
-  fs.writeFileSync(wrapperExe, 'stands for the wrapper');
+  fs.writeFileSync(wrapperExe, 'stands for winsv, which is known by its option --password-stdin');
   const svc = new Service({ id: 'svc', script, winswDest: dir, wrapperExe, ...config });
   const calls = [];
   t.mock.method(cmd, 'run', async (file, args, options) => {
@@ -28,9 +28,24 @@ function recorded(t, config) {
   return { svc, calls, events };
 }
 
-test('the bundled wrapper is WinSW, another one is not', () => {
-  assert.equal(winsw.isWinSW({ wrapperExe: winsw.WINSW_EXE }), true);
-  assert.equal(winsw.isWinSW({ wrapperExe: 'C:\\tools\\winsv.exe' }), false);
+test('the bundled wrapper is winsv, another executable is driven like WinSW', t => {
+  assert.equal(winsw.wrapperExe({}), process.env.WIN_SV_EXE ? path.resolve(process.env.WIN_SV_EXE) : winsw.WINSV_EXE);
+  assert.equal(winsw.isWinSW(winsw.WINSV_EXE), false);
+  const other = path.join(tmpDir(t), 'other.exe');
+  fs.writeFileSync(other, 'another wrapper');
+  assert.equal(winsw.isWinSW(other), true);
+});
+
+test('a service that still runs a copy of WinSW is driven like WinSW until the copy is replaced', async t => {
+  const { svc, calls } = recorded(t, { logOnAs: { account: 'corp\\bob', password: 'secret' } });
+  fs.mkdirSync(svc.winswPath, { recursive: true });
+  fs.writeFileSync(svc.exePath, 'the copy of WinSW made by an older version');
+  await svc.install();
+  await svc.install({ overwrite: true });
+  assert.deepEqual(calls, [
+    ['install', '--username', 'corp\\bob', '--password', 'secret'],
+    ['install', '--username', 'corp\\bob', '--password-stdin', { input: 'secret\n' }],
+  ]);
 });
 
 test('the password is given on the standard input, never on the command line', async t => {

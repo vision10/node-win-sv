@@ -11,7 +11,7 @@ const path = require('path');
 
 const { Service, cmd } = require('../index');
 const winsw = require('../lib/winsw');
-const { script, tmpDir, isWinSW } = require('./helpers');
+const { script, tmpDir, asWinSW } = require('./helpers');
 
 const node = process.execPath;
 const fail = (code, message) => Object.assign(new Error(message), { code, stdout: '', stderr: message });
@@ -224,7 +224,7 @@ function unprivileged(t, status) {
 }
 
 test('install and start share one prompt', async t => {
-  if (!isWinSW) { return t.skip('the command line of WinSW, see winsv.test.js') }
+  asWinSW(t);
   const { svc, direct, prompts, events } = unprivileged(t);
   assert.equal(await svc.install({ start: true }), 'install as admin\nstart as admin');
   assert.deepEqual(prompts, [['install', 'start']]);
@@ -242,7 +242,7 @@ test('a single command is left to the wrapper, which prompts by itself', async t
 });
 
 test('noElevate never prompts', async t => {
-  if (!isWinSW) { return t.skip('the command line of WinSW, see winsv.test.js') }
+  asWinSW(t);
   const { svc, direct, prompts } = unprivileged(t, 'Active (running)');
   await svc.install({ start: true, noElevate: true });
   await svc.uninstall({ noElevate: true });
