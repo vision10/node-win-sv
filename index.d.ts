@@ -79,7 +79,7 @@ export interface ServiceConfig {
   /** Name of the wrapper folder, defaults to `daemon`. */
   winswDir?: string;
   /** Wrapper executable to use instead of the bundled WinSW. The WIN_SV_EXE environment variable does the same. */
-  winswExe?: string;
+  wrapperExe?: string;
 
   logpath?: string;
   log?: LogOptions | LogOptions['mode'];
@@ -262,8 +262,10 @@ export const cmd: {
   /** Absolute path of a tool in System32. */
   sys(name: string): string;
   run(file: string, args?: string[], options?: ExecFileOptions): Promise<string>;
-  /** Runs a Windows PowerShell 5.1 script, output is UTF-8. */
+  /** Runs a PowerShell script (7 when installed, else Windows PowerShell 5.1), output is UTF-8. */
   powershell(script: string, options?: ExecFileOptions): Promise<string>;
+  /** Path of the PowerShell in use. `trusted` ignores PATH, as done for the process started as administrator. */
+  powershellExe(trusted?: boolean): string;
   isElevated(): Promise<boolean>;
   /** Runs as administrator behind a UAC prompt. Rejects with code 1223 when the prompt is declined. */
   elevate(file: string, args?: string[], options?: { cwd?: string }): Promise<string>;

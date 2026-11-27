@@ -87,7 +87,7 @@ Only `id` (or `name`) and `script` (or `execPath`) are required.
 
   winswDest: 'C:/different/path',        // where the wrapper folder goes, defaults to the script directory
   winswDir: 'service',                   // name of the wrapper folder, default: 'daemon'
-  winswExe: 'C:/tools/wrapper.exe',      // another wrapper executable, see "Using another wrapper"
+  wrapperExe: 'C:/tools/wrapper.exe',    // another wrapper executable, see "Using another wrapper"
 
   // what Windows does when the script exits with an error, at most 3, the last one repeats
   onfailure: [
@@ -287,14 +287,17 @@ await log.success('It worked.'[, code]);
 
 ## PowerShell
 
-Service and process queries, and the UAC prompts shown by this package, go through PowerShell. Windows
-PowerShell 5.1 is used where Windows ships it; otherwise PowerShell 7 (`pwsh`) is picked up from its default
-location or from `PATH`. Set `WIN_SV_POWERSHELL` to the path of the executable to choose it yourself.
+Service and process queries, and the UAC prompts shown by this package, go through PowerShell. PowerShell 7
+(`pwsh`) is used when it is installed, from its default location or from `PATH`; otherwise Windows PowerShell 5.1,
+where Windows still ships it. Set `WIN_SV_POWERSHELL` to the path of the executable to choose it yourself.
+
+The process started as administrator is never a `pwsh` found through `PATH`, only one from the default location,
+from `WIN_SV_POWERSHELL`, or Windows PowerShell.
 The WinSW commands themselves (`install`, `start`, `stop`...) do not need PowerShell.
 
 ## Using another wrapper
 
-The executable copied for each service can be replaced, per service with the `winswExe` option or globally with
+The executable copied for each service can be replaced, per service with the `wrapperExe` option or globally with
 the `WIN_SV_EXE` environment variable. A replacement has to read the same configuration file and answer the same
 commands; `tests/acceptance/wrapper.js` states that contract and checks it:
 

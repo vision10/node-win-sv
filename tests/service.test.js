@@ -127,14 +127,14 @@ test('starting without administrator rights fails when elevation is refused', as
   });
 });
 
-test('a custom WinSW executable', t => {
+test('a custom wrapper executable', t => {
   const dir = tmpDir(t);
   const custom = path.join(dir, 'custom.exe');
   fs.writeFileSync(custom, 'not really an executable');
-  const svc = new Service({ id: 'svc', script, winswDest: dir, winswExe: custom });
+  const svc = new Service({ id: 'svc', script, winswDest: dir, wrapperExe: custom });
   winsw.createFiles(svc.winswPath, svc.config);
   assert.equal(fs.readFileSync(svc.exePath, 'utf8'), 'not really an executable');
-  assert.throws(() => winsw.createFiles(dir, { id: 'svc', script, winswExe: path.join(dir, 'missing.exe') }), /not found/);
+  assert.throws(() => winsw.createFiles(dir, { id: 'svc', script, wrapperExe: path.join(dir, 'missing.exe') }), /not found/);
 });
 
 test('command flags', async t => {

@@ -49,16 +49,16 @@
 - `services`: `get`, `list`, `start`, `stop`, `restart` for any service of the machine.
 - CLI commands `logs` and `list`, options `--user` and `--password` (or the `WIN_SV_PASSWORD` variable).
 - ES module entry point: `import { Service } from 'win-sv'`.
-- PowerShell 7 is used where Windows PowerShell 5.1 is missing; `WIN_SV_POWERSHELL` chooses the executable.
-- `WIN_SV_EXE` replaces the bundled wrapper executable, like the `winswExe` option.
-- Options: `winswExe`, `prestart`, `poststart`, `prestop`, `poststop`, `preshutdown`, `preshutdownTimeout`, `autoRefresh`,
+- PowerShell 7 is used when installed, Windows PowerShell 5.1 otherwise; `WIN_SV_POWERSHELL` chooses the executable.
+- `WIN_SV_EXE` replaces the bundled wrapper executable, like the `wrapperExe` option.
+- Options: `wrapperExe`, `prestart`, `poststart`, `prestop`, `poststop`, `preshutdown`, `preshutdownTimeout`, `autoRefresh`,
   log modes `reset` and `none`, several `download` entries, `logOnAs` as a string or with `prompt`.
 - `EventLogger.success()`, `EventLogger.isRegistered()`.
 - `cmd.isElevated()`, `cmd.elevateAll()`, `cmd.admin()`, `cmd.powershell()`, `cmd.sys()`, `generateXml()` export.
 - TypeScript declarations.
 - Unit tests (`npm test`) and acceptance tests on real services (`npm run test:acceptance`), replacing the
   `examples` folder. `tests/acceptance/wrapper.js` states what a wrapper executable must do.
-- `LICENSE`, `.gitattributes` and a GitHub Actions workflow.
+- `LICENSE`, `.gitattributes`, and GitHub Actions workflows for tests and for publishing to npm.
 
 ### Removed
 
