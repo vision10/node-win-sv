@@ -150,11 +150,13 @@ logOnAs: { prompt: 'dialog' }                          // ask for the user name 
 logOnAs: { account: 'corp\\bob', password: process.env.SVC_PASSWORD, allowservicelogon: true }
 ```
 
-- `allowservicelogon` grants the account the "Log on as a service" right.
+- `allowservicelogon` grants the account the "Log on as a service" right. The winsv wrapper grants it unless
+  `allowservicelogon` is `false`.
 - `svc.install({ user, password })` sets the account for that installation only and replaces `logOnAs`.
-- A password is **never written to the configuration file**. It is passed to the wrapper on its command line while
-  the service is being installed, where other processes of the machine can read it for that moment. Where that
-  matters, prefer the prompt, or an account that needs no password (built-in or group managed).
+- A password is **never written to the configuration file**. With the bundled WinSW it is passed on the command
+  line while the service is being installed, where other processes of the machine can read it for that moment.
+  Where that matters, prefer the prompt, an account that needs no password (built-in or group managed), or the
+  winsv wrapper, which reads it from its standard input (see "Using another wrapper").
 - Do not keep the password in your source: read it from the environment or a secret store.
 
 ### Methods
@@ -305,6 +307,19 @@ commands; `tests/acceptance/wrapper.js` states that contract and checks it:
 set WIN_SV_EXE=C:\path\to\wrapper.exe
 npm run test:acceptance
 ```
+
+### winsv
+
+[winsv](https://github.com/vision10/winsw) is such a replacement: a small native executable that needs no .NET.
+Any wrapper other than the bundled WinSW is taken to be winsv, and the package then uses what it adds:
+
+- `install({ start: true })` is one command, and the password of the service account is written to the standard
+  input of the wrapper instead of its command line.
+- `keepDetached: true`: processes the service started detached (`spawn(..., { detached: true })` and `unref()`)
+  are not stopped with it.
+- `log.combine`, `log.timestamp` (`true` or a date format), `log.rollOnStart`, `log.wrapper: false`, and
+  `log.keepFiles` for the time based modes.
+- `download`, `customize()` and `beeponshutdown` are WinSW only.
 
 ## Tests
 

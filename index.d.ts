@@ -24,13 +24,21 @@ export interface LogOptions {
   mode?: 'append' | 'reset' | 'none' | 'roll-by-size' | 'roll-by-time' | 'roll-by-size-time';
   /** KB, default 10240 */
   sizeThreshold?: number;
-  /** default 8 */
+  /** roll-by-size: default 8. With the winsv wrapper also the number of dated files kept by the time based modes. */
   keepFiles?: number;
   /** default `yyyyMMdd` */
   pattern?: string;
   autoRollAtTime?: string;
   zipOlderThanNumDays?: number;
   zipDateFormat?: string;
+  /** winsv wrapper only: the error output goes to the same file as the output */
+  combine?: boolean;
+  /** winsv wrapper only: a date in front of each line, `true` or a format such as `yyyy-MM-dd HH:mm:ss` */
+  timestamp?: boolean | string;
+  /** winsv wrapper only: the size based modes start a new file each time the service starts */
+  rollOnStart?: boolean;
+  /** winsv wrapper only: `false` for no `<id>.wrapper.log` */
+  wrapper?: boolean;
 }
 
 export interface FailureAction {
@@ -106,6 +114,8 @@ export interface ServiceConfig {
   preshutdown?: boolean;
   preshutdownTimeout?: Duration;
   autoRefresh?: boolean;
+  /** winsv wrapper only: processes the service started detached (and unref'd) are not stopped with it */
+  keepDetached?: boolean;
   interactive?: boolean;
   beeponshutdown?: boolean;
   download?: Download | Download[];

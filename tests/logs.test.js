@@ -92,6 +92,19 @@ test('with rolling logs the most recent file is read', async t => {
   assert.equal(svc.logFile(), current);
 });
 
+test('files rolled by time are named <id>_<date>', async t => {
+  const { svc, write } = service(t, { log: { mode: 'roll-by-time' } });
+  write('svc_20240101.out.log', 'old\r\n', 3600);
+  const latest = write('svc_20240102.out.log', 'new\r\n', 60);
+  const errors = write('svc_20240102.err.log', 'errors\r\n', 30);
+  write('svc_other.out.log', 'the log of the service svc_other\r\n');
+  write('svc_other_20240102.out.log', 'also of svc_other\r\n');
+  write('svc.out.log.old', 'not a current log\r\n');
+  assert.equal(svc.logFile(), latest);
+  assert.equal(svc.logFile('err'), errors);
+  assert.equal(await svc.logs(), 'new');
+});
+
 test('the id is matched without regard to case', async t => {
   const { svc, write } = service(t, { id: 'My.Svc' });
   write('my.svc.out.log', 'found\r\n');

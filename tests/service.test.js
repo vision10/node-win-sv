@@ -116,11 +116,12 @@ test('WinSW rejects a broken configuration file', async t => {
   await assert.rejects(svc.status());
 });
 
-test('starting without administrator rights fails when elevation is refused', async t => {
+test('installing without administrator rights fails when elevation is refused', async t => {
   if (await cmd.isElevated()) { return t.skip('running elevated') }
+  // install and not start: a wrapper may answer 1060 for a service that is not installed before
+  // finding out that it has no rights, while installing is refused whatever the state of the service
   const svc = new Service({ id: 'win-sv-unit-' + process.pid, script, winswDest: tmpDir(t) });
-  winsw.createFiles(svc.winswPath, svc.config);
-  await assert.rejects(svc.start(true), error => {
+  await assert.rejects(svc.install({ noElevate: true }), error => {
     assert.equal(error.code, 5);
     assert.match(error.message, /denied/i);
     return true;
@@ -210,6 +211,7 @@ test('a failing command rejects and emits nothing', async t => {
 });
 
 test('install writes the files and passes the account', async t => {
+  if (!isWinSW) { return t.skip('the command line of WinSW, see winsv.test.js') }
   const dest = tmpDir(t);
   const svc = new Service({ id: 'svc', script, winswDest: dest, description: 'first' });
   const calls = [];

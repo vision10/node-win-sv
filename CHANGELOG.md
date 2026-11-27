@@ -51,6 +51,11 @@
 - ES module entry point: `import { Service } from 'win-sv'`.
 - PowerShell 7 is used when installed, Windows PowerShell 5.1 otherwise; `WIN_SV_POWERSHELL` chooses the executable.
 - `WIN_SV_EXE` replaces the bundled wrapper executable, like the `wrapperExe` option.
+- Support for the [winsv](https://github.com/vision10/winsw) wrapper, used when another wrapper than the bundled
+  WinSW is set: install and start in one command, the account password on the standard input instead of the
+  command line, and the options `keepDetached`, `log.combine`, `log.timestamp`, `log.rollOnStart`, `log.wrapper`
+  and `log.keepFiles` for the time based modes.
+- `logFile()`, `logs()` and `watchLogs()` find the files rolled by time (`<id>_<date>.out.log`).
 - Options: `wrapperExe`, `prestart`, `poststart`, `prestop`, `poststop`, `preshutdown`, `preshutdownTimeout`, `autoRefresh`,
   log modes `reset` and `none`, several `download` entries, `logOnAs` as a string or with `prompt`.
 - `EventLogger.success()`, `EventLogger.isRegistered()`.
