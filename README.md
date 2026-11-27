@@ -310,7 +310,7 @@ npm run test:acceptance
 
 ### winsv
 
-[winsv](https://github.com/vision10/winsw) is such a replacement: a small native executable that needs no .NET.
+[winsv](https://github.com/vision10/winsv) is such a replacement: a small native executable that needs no .NET.
 Any wrapper other than the bundled WinSW is taken to be winsv, and the package then uses what it adds:
 
 - `install({ start: true })` is one command, and the password of the service account is written to the standard
