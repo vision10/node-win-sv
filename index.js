@@ -1,10 +1,13 @@
 'use strict';
-if (require('os').platform().indexOf('win32') < 0) {
-    throw new Error('winsw is only supported on Windows.')
+
+if (process.platform !== 'win32') {
+  throw new Error('win-sv is only supported on Windows.');
 }
 
 module.exports = {
-    process: require('./lib/process'),
-    Service: require('./lib/service'),
-    EventLogger: require('./lib/eventlog'),
-}
+  Service: require('./lib/service'),
+  EventLogger: require('./lib/eventlog'),
+  process: require('./lib/process'),
+  cmd: require('./lib/cmd'),
+  generateXml: require('./lib/winsw').generateXml,
+};

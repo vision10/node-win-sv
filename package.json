@@ -1,12 +1,12 @@
 {
   "name": "win-sv",
-  "version": "0.0.5",
-  "description": "Wrapper for WinSW.exe, OS service manager, event logging, UAC, and several helper methods for interacting with Windows services.",
+  "version": "1.0.0",
+  "description": "Run Node.js scripts (or any executable) as native Windows services using WinSW. Includes event logging and process helpers. Zero dependencies.",
   "author": "Sorin Muresan <sorinm025@gmail.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git://github.com/vision10/node-win-sv.git"
+    "url": "git+https://github.com/vision10/node-win-sv.git"
   },
   "keywords": [
     "windows",
@@ -23,20 +23,27 @@
     "install"
   ],
   "main": "index.js",
+  "types": "index.d.ts",
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "CHANGELOG.md",
+    "lib/",
+    "bin/cli.js",
+    "bin/WinSW.exe",
+    "bin/WinSW.LICENSE.txt"
+  ],
   "os": [
     "win32"
   ],
   "engines": {
-    "node": ">=8"
+    "node": ">=18.3"
   },
   "bin": {
-    "service": "./bin/cli.js"
+    "win-sv": "bin/cli.js"
   },
   "scripts": {
-    "test": "node ./examples/service.js"
-  },
-  "dependencies": {
-    "xml": "^1.0.1",
-    "yargs": "^17.3.1"
+    "test": "node --test",
+    "test:service": "node tests/integration.js"
   }
 }

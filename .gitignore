@@ -1,3 +1,7 @@
 npm-debug.log
 node_modules/
-.vs
+.vs/
+
+
+# files generated when a service is installed next to its script
+daemon/

@@ -1,51 +1,152 @@
 #!/usr/bin/env node
+'use strict';
 
-const fs = require('fs');
 const path = require('path');
+const { parseArgs } = require('util');
+const pkg = require('../package.json');
 
-var argv = require('yargs')
-  .alias('n', 'name')
-  .describe('name', 'The name of the service.')
-  .demand('file')
-  .alias('s', 'script')
-  .describe('script', 'The absolute path of the script to be run as a process.')
-  .check(function (argv) {
-    return fs.existsSync(path.resolve(argv.d))
-  })
-  .alias('d', 'cwd')
-  .describe('cwd', 'The absolute path of the current working directory of the script to be run as a process.\nDefaults to script directory.')
-  .check(function (argv) {
-    return fs.existsSync(path.resolve(argv.d))
-  })
-  .alias('lp', 'logpath')
-  .describe('logpath', 'Path for log files generation.')
-  .alias('l', 'log')
-  .describe('log', 'Log options.')
-  .alias('h', 'help')
-  .describe('help', 'Help commands.')
-  .alias('v', 'version')
-  .describe('version', 'Version log, including package, winsw.exe and minimum node.js version required to run.')
-  .argv
+const COMMANDS = ['install', 'uninstall', 'start', 'stop', 'restart', 'status', 'xml'];
 
+const HELP = `${pkg.name} v${pkg.version}
+${pkg.description}
 
-function help() {
-  console.log([
-    '',
-    '  Package name: ' + pkg.name,
-    '',
-    '  Package description: ' + pkg.description,
-    '',
-    '  Example:',
-    '    node node_modules/' + pkg.name + '/cli.js',
-    ''
-  ].join('\n'));
+Usage:
+  win-sv <command> --script <path> [options] [-- script arguments]
+  win-sv <command> --config <file.json|file.js> [options]
+
+Commands:
+  install      Create the service files and register the service
+  uninstall    Stop and remove the service
+  start        Start the service
+  stop         Stop the service
+  restart      Stop and then start the service
+  status       Print the service status
+  xml          Print the generated WinSW configuration, changes nothing
+
+Options:
+  -s, --script <path>        Script to run as a service
+  -i, --id <id>              Service id, defaults to the script file name
+  -n, --name <name>          Display name
+      --description <text>   Description shown in the services manager
+  -d, --cwd <path>           Working directory, defaults to the script directory
+  -c, --config <file>        JSON or JS file with any option accepted by \`new Service()\`
+      --exec <path>          Executable running the script, defaults to this node.exe
+      --arg <value>          Argument passed to the script (repeatable), or put them all after --
+      --env <NAME=value>     Environment variable (repeatable)
+      --dest <path>          Where the wrapper folder is created, defaults to the script directory
+      --logpath <path>       Folder for the log files
+      --log <mode>           append | reset | none | roll-by-size | roll-by-time | roll-by-size-time
+      --startmode <mode>     automatic | manual | disabled
+      --restart-delay <sec>  Restart the service this many seconds after a failure
+      --start                install: start the service once installed
+      --overwrite            install: replace an existing wrapper executable
+      --remove-files         uninstall: delete the wrapper, configuration and logs
+      --force                stop/restart/uninstall: also stop dependent services
+      --no-elevate           Fail instead of showing a UAC prompt
+  -h, --help
+  -v, --version
+`;
+
+function fail(message) {
+  console.error(message);
+  process.exitCode = 1;
 }
 
-function version() {
-  console.log([
-    '* version info:',
-    '* package.json version: ' + pkg.version,
-    '* process.version: ' + process.version,
-    ''
-  ].join('\n'));
+function buildConfig(values, scriptArgs) {
+  let config = {};
+  if (values.config) {
+    const file = path.resolve(values.config);
+    config = { ...require(file) };
+    // relative paths in a config file are relative to that file
+    const dir = path.dirname(file);
+    for (const key of ['script', 'cwd', 'workingdirectory', 'winswDest', 'logpath']) {
+      if (config[key]) { config[key] = path.resolve(dir, config[key]) }
+    }
+  }
+  if (values.script) { config.script = path.resolve(values.script) }
+  if (values.id) { config.id = values.id }
+  if (values.name) { config.name = values.name }
+  if (values.description) { config.description = values.description }
+  if (values.cwd) { config.cwd = path.resolve(values.cwd) }
+  if (values.exec) { config.execPath = values.exec }
+  const args = (values.arg || []).concat(scriptArgs || []);
+  if (args.length) { config.scriptOptions = args }
+  if (values.dest) { config.winswDest = path.resolve(values.dest) }
+  if (values.logpath) { config.logpath = path.resolve(values.logpath) }
+  if (values.log) { config.log = { ...config.log, mode: values.log } }
+  if (values.startmode) { config.startmode = values.startmode }
+  if (values['restart-delay'] !== undefined) {
+    config.onfailure = [{ action: 'restart', delay: Number(values['restart-delay']) || 0 }];
+  }
+  if (values.env) {
+    const env = Array.isArray(config.env) ? [...config.env] : Object.entries(config.env || {}).map(([name, value]) => ({ name, value }));
+    for (const pair of values.env) {
+      const at = pair.indexOf('=');
+      if (at < 1) { throw new Error(`Invalid --env "${pair}", expected NAME=value`) }
+      env.push({ name: pair.slice(0, at), value: pair.slice(at + 1) });
+    }
+    config.env = env;
+  }
+  if (!config.id && !config.name && config.script) {
+    config.id = path.basename(config.script, path.extname(config.script));
+  }
+  return config;
 }
+
+async function main() {
+  const { values, positionals } = parseArgs({
+    allowPositionals: true,
+    options: {
+      script: { type: 'string', short: 's' },
+      id: { type: 'string', short: 'i' },
+      name: { type: 'string', short: 'n' },
+      description: { type: 'string' },
+      cwd: { type: 'string', short: 'd' },
+      config: { type: 'string', short: 'c' },
+      exec: { type: 'string' },
+      arg: { type: 'string', multiple: true },
+      env: { type: 'string', multiple: true },
+      dest: { type: 'string' },
+      logpath: { type: 'string' },
+      log: { type: 'string' },
+      startmode: { type: 'string' },
+      'restart-delay': { type: 'string' },
+      start: { type: 'boolean' },
+      overwrite: { type: 'boolean' },
+      'remove-files': { type: 'boolean' },
+      force: { type: 'boolean' },
+      'no-elevate': { type: 'boolean' },
+      help: { type: 'boolean', short: 'h' },
+      version: { type: 'boolean', short: 'v' },
+    },
+  });
+
+  if (values.version) { return console.log(pkg.version) }
+  const command = positionals[0];
+  if (values.help || !command) { return console.log(HELP) }
+  if (!COMMANDS.includes(command)) { throw new Error(`Unknown command "${command}".\n\n${HELP}`) }
+
+  const { Service, generateXml } = require('../index');
+  const config = buildConfig(values, positionals.slice(1));
+  if (command === 'xml') { return process.stdout.write(generateXml(config)) }
+
+  const service = new Service(config);
+  const noElevate = values['no-elevate'];
+  let output;
+  switch (command) {
+    case 'install':
+      output = await service.install({ overwrite: values.overwrite, noElevate });
+      if (values.start) { output = [output, await service.start(noElevate)].filter(Boolean).join('\n') }
+      break;
+    case 'uninstall':
+      output = await service.uninstall({ removeFiles: values['remove-files'], force: values.force, noElevate });
+      break;
+    case 'start': output = await service.start(noElevate); break;
+    case 'stop': output = await service.stop(values.force, noElevate); break;
+    case 'restart': output = await service.restart(noElevate, values.force); break;
+    case 'status': output = await service.status(); break;
+  }
+  if (output) { console.log(output) }
+}
+
+main().catch(error => fail(error.message));
