@@ -19,6 +19,10 @@ function tag(xml, name) {
   return (xml.match(new RegExp(`<${name}>(.*)</${name}>`)) || [])[1];
 }
 
+/** The wrapper under test: the bundled WinSW, or the executable named by WIN_SV_EXE. */
+const wrapper = require('../lib/winsw').wrapperExe();
+const isWinSW = wrapper === require('../lib/winsw').WINSW_EXE;
+
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function waitFor(what, check, timeout = 30000) {
@@ -34,4 +38,4 @@ async function waitFor(what, check, timeout = 30000) {
   throw new Error(`Timed out waiting for ${what}` + (last ? `: ${last.message}` : ''));
 }
 
-module.exports = { script, tmpDir, tag, sleep, waitFor };
+module.exports = { script, tmpDir, tag, sleep, waitFor, wrapper, isWinSW };

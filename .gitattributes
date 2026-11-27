@@ -1,0 +1,5 @@
+# Text files are stored with LF in the repository and checked out with LF on every machine,
+# so diffs do not depend on who touched a file. Node.js and Windows tools read LF fine.
+* text=auto eol=lf
+
+*.exe binary

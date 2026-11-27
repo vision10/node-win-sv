@@ -5,7 +5,7 @@ const path = require('path');
 const { parseArgs } = require('util');
 const pkg = require('../package.json');
 
-const COMMANDS = ['install', 'uninstall', 'start', 'stop', 'restart', 'status', 'xml'];
+const COMMANDS = ['install', 'uninstall', 'start', 'stop', 'restart', 'status', 'logs', 'list', 'xml'];
 
 const HELP = `${pkg.name} v${pkg.version}
 ${pkg.description}
@@ -13,6 +13,7 @@ ${pkg.description}
 Usage:
   win-sv <command> --script <path> [options] [-- script arguments]
   win-sv <command> --config <file.json|file.js> [options]
+  win-sv list [filter] [--json]
 
 Commands:
   install      Create the service files and register the service
@@ -21,6 +22,8 @@ Commands:
   stop         Stop the service
   restart      Stop and then start the service
   status       Print the service status
+  logs         Print the end of the service output
+  list         List the services installed on this machine, optionally filtered by name
   xml          Print the generated WinSW configuration, changes nothing
 
 Options:
@@ -38,11 +41,20 @@ Options:
       --log <mode>           append | reset | none | roll-by-size | roll-by-time | roll-by-size-time
       --startmode <mode>     automatic | manual | disabled
       --restart-delay <sec>  Restart the service this many seconds after a failure
+      --user <account>       Account running the service: LocalService, NetworkService or DOMAIN\\user.
+                             A user account asks for its password when installing, unless --password
+                             or the WIN_SV_PASSWORD environment variable provides it
+      --password <password>
       --start                install: start the service once installed
       --overwrite            install: replace an existing wrapper executable
       --remove-files         uninstall: delete the wrapper, configuration and logs
       --force                stop/restart/uninstall: also stop dependent services
       --no-elevate           Fail instead of showing a UAC prompt
+      --err                  logs: the error output instead of the standard output
+      --wrapper              logs: the log of the wrapper itself
+      --lines <count>        logs: number of lines, default 100
+  -f, --follow               logs: keep printing what is appended
+      --json                 list: print JSON
   -h, --help
   -v, --version
 `;
@@ -75,6 +87,13 @@ function buildConfig(values, scriptArgs) {
   if (values.logpath) { config.logpath = path.resolve(values.logpath) }
   if (values.log) { config.log = { ...config.log, mode: values.log } }
   if (values.startmode) { config.startmode = values.startmode }
+  if (values.user) {
+    const password = values.password !== undefined ? values.password : process.env.WIN_SV_PASSWORD;
+    config.logOnAs = { ...(typeof config.logOnAs === 'object' ? config.logOnAs : {}), account: values.user };
+    if (password !== undefined) { config.logOnAs.password = password }
+  } else if (values.password !== undefined) {
+    throw new Error('--password requires --user');
+  }
   if (values['restart-delay'] !== undefined) {
     config.onfailure = [{ action: 'restart', delay: Number(values['restart-delay']) || 0 }];
   }
@@ -111,6 +130,13 @@ async function main() {
       log: { type: 'string' },
       startmode: { type: 'string' },
       'restart-delay': { type: 'string' },
+      user: { type: 'string' },
+      password: { type: 'string' },
+      err: { type: 'boolean' },
+      wrapper: { type: 'boolean' },
+      lines: { type: 'string' },
+      follow: { type: 'boolean', short: 'f' },
+      json: { type: 'boolean' },
       start: { type: 'boolean' },
       overwrite: { type: 'boolean' },
       'remove-files': { type: 'boolean' },
@@ -126,7 +152,18 @@ async function main() {
   if (values.help || !command) { return console.log(HELP) }
   if (!COMMANDS.includes(command)) { throw new Error(`Unknown command "${command}".\n\n${HELP}`) }
 
-  const { Service, generateXml } = require('../index');
+  const { Service, services, generateXml } = require('../index');
+  if (command === 'list') {
+    const found = await services.list(positionals[1]);
+    if (values.json) { return console.log(JSON.stringify(found, null, 2)) }
+    const width = key => Math.max(key.length, ...found.map(service => String(service[key]).length));
+    const columns = ['name', 'state', 'startMode', 'displayName'];
+    const widths = columns.map(width);
+    const line = cells => cells.map((cell, i) => String(cell).padEnd(widths[i])).join('  ').trimEnd();
+    console.log(line(columns.map(column => column.toUpperCase())));
+    return found.forEach(service => console.log(line(columns.map(column => service[column]))));
+  }
+
   const config = buildConfig(values, positionals.slice(1));
   if (command === 'xml') { return process.stdout.write(generateXml(config)) }
 
@@ -135,8 +172,7 @@ async function main() {
   let output;
   switch (command) {
     case 'install':
-      output = await service.install({ overwrite: values.overwrite, noElevate });
-      if (values.start) { output = [output, await service.start(noElevate)].filter(Boolean).join('\n') }
+      output = await service.install({ overwrite: values.overwrite, start: values.start, noElevate });
       break;
     case 'uninstall':
       output = await service.uninstall({ removeFiles: values['remove-files'], force: values.force, noElevate });
@@ -145,6 +181,16 @@ async function main() {
     case 'stop': output = await service.stop(values.force, noElevate); break;
     case 'restart': output = await service.restart(noElevate, values.force); break;
     case 'status': output = await service.status(); break;
+    case 'logs': {
+      const type = values.wrapper ? 'wrapper' : (values.err ? 'err' : 'out');
+      output = await service.logs({ type, lines: Number(values.lines) || 100 });
+      if (values.follow) {
+        if (output) { console.log(output) }
+        service.watchLogs({ type }, text => process.stdout.write(text));
+        return;
+      }
+      break;
+    }
   }
   if (output) { console.log(output) }
 }

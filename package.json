@@ -1,7 +1,7 @@
 {
   "name": "win-sv",
   "version": "1.0.0",
-  "description": "Run Node.js scripts (or any executable) as native Windows services using WinSW. Includes event logging and process helpers. Zero dependencies.",
+  "description": "Run Node.js scripts (or any executable) as native Windows services using WinSW. Includes service, process and event log helpers, and a CLI. Zero dependencies.",
   "author": "Sorin Muresan <sorinm025@gmail.com>",
   "license": "MIT",
   "repository": {
@@ -24,10 +24,20 @@
   ],
   "main": "index.js",
   "types": "index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./index.mjs",
+      "require": "./index.js"
+    },
+    "./package.json": "./package.json"
+  },
   "files": [
     "index.js",
+    "index.mjs",
     "index.d.ts",
     "CHANGELOG.md",
+    "LICENSE",
     "lib/",
     "bin/cli.js",
     "bin/WinSW.exe",
@@ -44,6 +54,6 @@
   },
   "scripts": {
     "test": "node --test",
-    "test:service": "node tests/integration.js"
+    "test:acceptance": "node tests/acceptance/run.js"
   }
 }

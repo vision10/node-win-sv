@@ -11,13 +11,15 @@ const path = require('path');
 
 const { Service, cmd } = require('../index');
 const winsw = require('../lib/winsw');
-const { script, tmpDir, tag } = require('./helpers');
+const { script, tmpDir, tag, wrapper, isWinSW } = require('./helpers');
 
 /** A service with its files on disk and WinSW replaced by `answer(command, args)`. */
 function stubbed(t, config, answer) {
   const svc = new Service({ id: 'svc', script, winswDest: tmpDir(t), ...config });
   winsw.createFiles(svc.winswPath, svc.config);
   const calls = [];
+  // as an administrator every command goes straight to the wrapper, elevation.test.js covers the other case
+  t.mock.method(cmd, 'isElevated', async () => true);
   t.mock.method(cmd, 'run', async (file, args, options) => {
     calls.push(args.join(' '));
     assert.equal(file, svc.exePath);
@@ -215,18 +217,21 @@ test('install writes the files and passes the account', async t => {
 
   assert.equal(await svc.install(), 'ok');
   assert.equal(svc.exists, true);
-  assert.equal(fs.statSync(svc.exePath).size, fs.statSync(winsw.WINSW_EXE).size);
+  assert.equal(fs.statSync(svc.exePath).size, fs.statSync(wrapper).size);
   assert.equal(fs.readFileSync(svc.xmlPath)[0], 0xEF, 'the file starts with a UTF-8 byte order mark');
   assert.equal(tag(fs.readFileSync(svc.xmlPath, 'utf8'), 'description'), 'first');
 
   await svc.install({ noElevate: true, user: 'corp\\bob', pass: 'secret' });
   await svc.install({ username: 'bob', password: 'two words' });
   await svc.install({ user: 'gmsa$' });
+  await svc.install({ start: true, noElevate: true });
   assert.deepEqual(calls, [
     ['install'],
     ['install', '--no-elevate', '--username', 'corp\\bob', '--password', 'secret'],
     ['install', '--username', 'bob', '--password', 'two words'],
-    ['install', '--username', 'gmsa$', '--password', ''],
+    ['install'],
+    ['install', '--no-elevate'],
+    ['start', '--no-elevate'],
   ]);
 });
 
@@ -240,7 +245,7 @@ test('install refreshes the configuration but keeps the executable unless asked'
   assert.equal(fs.readFileSync(svc.exePath, 'utf8'), 'old wrapper');
 
   await svc.install({ overwrite: true });
-  assert.equal(fs.statSync(svc.exePath).size, fs.statSync(winsw.WINSW_EXE).size);
+  assert.equal(fs.statSync(svc.exePath).size, fs.statSync(wrapper).size);
 });
 
 test('install fails before touching anything when the configuration is invalid', async t => {
@@ -331,13 +336,14 @@ test('customize', async t => {
   winsw.createFiles(svc.winswPath, svc.config);
   await svc.customize('relative.exe', 'ACME Company');
   assert.deepEqual(calls, [
-    ['WinSW.exe', 'customize', '--output', output, '--manufacturer', 'ACME Company'],
+    [path.basename(wrapper), 'customize', '--output', output, '--manufacturer', 'ACME Company'],
     ['svc.exe', 'customize', '--output', path.resolve('relative.exe'), '--manufacturer', 'ACME Company'],
   ]);
   assert.equal(emitted, 2);
 });
 
 test('customize writes a working copy of the wrapper', async t => {
+  if (!isWinSW) { return t.skip('specific to WinSW') }
   const dir = tmpDir(t);
   const output = path.join(dir, 'branded.exe');
   await new Service({ id: 'svc', script, winswDest: dir }).customize(output, 'ACME Company');

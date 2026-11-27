@@ -7,6 +7,7 @@ if (process.platform !== 'win32') {
 module.exports = {
   Service: require('./lib/service'),
   EventLogger: require('./lib/eventlog'),
+  services: require('./lib/services'),
   process: require('./lib/process'),
   cmd: require('./lib/cmd'),
   generateXml: require('./lib/winsw').generateXml,

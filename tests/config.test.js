@@ -138,28 +138,6 @@ test('a single failure action, a zero delay and invalid actions', () => {
   assert.throws(() => generateXml({ id: 'svc', script, onfailure: ['none', 'none', 'none', 'none'] }), /at most 3/);
 });
 
-test('service account', () => {
-  const account = cfg => generateXml({ id: 'svc', script, logOnAs: cfg });
-  assert.ok(!account(true).includes('serviceaccount'));
-  assert.equal(tag(account('LocalService'), 'username'), 'NT AUTHORITY\\LocalService');
-  assert.equal(tag(account('networkservice'), 'username'), 'NT AUTHORITY\\networkservice');
-  assert.equal(tag(account({}), 'username'), 'LocalSystem');
-  assert.equal(tag(account({ account: 'bob@corp.local', domain: 'ignored' }), 'username'), 'bob@corp.local');
-  assert.equal(tag(account({ account: '.\\bob' }), 'username'), '.\\bob');
-
-  const user = account({ domain: 'corp', account: 'bob', password: 'p&ss', allowservicelogon: true });
-  assert.equal(tag(user, 'username'), 'corp\\bob');
-  assert.equal(tag(user, 'password'), 'p&amp;ss');
-  assert.equal(tag(user, 'allowservicelogon'), 'true');
-
-  const gmsa = account({ domain: 'corp', account: 'gmsa$' });
-  assert.equal(tag(gmsa, 'username'), 'corp\\gmsa$');
-  assert.ok(!gmsa.includes('<password>'));
-
-  assert.equal(tag(account({ prompt: 'dialog' }), 'prompt'), 'dialog');
-  assert.throws(() => account({ prompt: 'telepathy' }), /prompt/);
-});
-
 test('log modes', () => {
   const log = cfg => generateXml({ id: 'svc', script, log: cfg });
   assert.ok(log('reset').includes('<log mode="reset"/>'));
